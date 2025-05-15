@@ -1,41 +1,60 @@
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS balance_history;
+DROP TABLE IF EXISTS balances;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS users;
+
 CREATE TABLE IF NOT EXISTS users (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(255) NOT NULL UNIQUE,
+    id VARCHAR(36) PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role ENUM('user', 'admin') DEFAULT 'user',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_username (username),
+    password VARCHAR(255) NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     INDEX idx_email (email)
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    from_user_id BIGINT NOT NULL,
-    to_user_id BIGINT NOT NULL,
-    amount DECIMAL(20,2) NOT NULL,
-    type ENUM('transfer', 'deposit', 'withdrawal') NOT NULL,
-    status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_from_user (from_user_id),
-    INDEX idx_to_user (to_user_id),
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    amount DECIMAL(19,4) NOT NULL,
+    description TEXT,
+    reference_id VARCHAR(100),
+    balance_after DECIMAL(19,4) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    INDEX idx_user_id (user_id),
     INDEX idx_created_at (created_at),
-    FOREIGN KEY (from_user_id) REFERENCES users(id),
-    FOREIGN KEY (to_user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS balances (
-    user_id BIGINT PRIMARY KEY,
-    amount DECIMAL(20,2) NOT NULL DEFAULT 0.00,
-    last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL UNIQUE,
+    amount DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+    currency VARCHAR(3) DEFAULT 'TRY',
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS balance_history (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    amount DECIMAL(19,4) NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS audit_logs (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     entity_type VARCHAR(50) NOT NULL,
-    entity_id BIGINT NOT NULL,
+    entity_id VARCHAR(36) NOT NULL,
     action VARCHAR(50) NOT NULL,
     details JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

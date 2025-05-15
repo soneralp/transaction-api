@@ -2,17 +2,10 @@ package domain
 
 import (
 	"encoding/json"
-	"errors"
 	"sync"
 	"time"
-)
 
-var (
-	ErrTransactionNotFound = errors.New("transaction not found")
-	ErrInvalidOperation    = errors.New("invalid operation")
-	ErrInsufficientFunds   = errors.New("insufficient funds")
-	ErrInvalidState        = errors.New("invalid transaction state")
-	ErrTransactionFailed   = errors.New("transaction failed")
+	"github.com/google/uuid"
 )
 
 type TransactionState string
@@ -24,28 +17,50 @@ const (
 	TransactionStateCancelled TransactionState = "cancelled"
 )
 
+type TransactionType string
+
+const (
+	TransactionTypeCredit   TransactionType = "CREDIT"
+	TransactionTypeDebit    TransactionType = "DEBIT"
+	TransactionTypeTransfer TransactionType = "TRANSFER"
+)
+
 type Transaction struct {
-	ID          uint             `json:"id"`
-	FromUserID  uint             `json:"from_user_id"`
-	ToUserID    uint             `json:"to_user_id"`
-	Amount      float64          `json:"amount"`
-	State       TransactionState `json:"state"`
-	Description string           `json:"description"`
-	CreatedAt   time.Time        `json:"created_at"`
-	UpdatedAt   time.Time        `json:"updated_at"`
-	mu          sync.Mutex       `json:"-"`
+	ID           uuid.UUID       `json:"id" gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
+	UserID       uuid.UUID       `json:"user_id" gorm:"type:uuid;not null"`
+	Type         TransactionType `json:"type" gorm:"type:varchar(20);not null"`
+	Amount       float64         `json:"amount" gorm:"type:decimal(19,4);not null"`
+	Description  string          `json:"description" gorm:"type:text"`
+	ReferenceID  string          `json:"reference_id" gorm:"type:varchar(100)"`
+	BalanceAfter float64         `json:"balance_after" gorm:"type:decimal(19,4);not null"`
+	Status       string          `json:"status" gorm:"type:varchar(20);not null;default:'pending'"`
+	CreatedAt    time.Time       `json:"created_at" gorm:"not null"`
+	UpdatedAt    time.Time       `json:"updated_at" gorm:"not null"`
+	mu           sync.Mutex      `json:"-"`
 }
 
-func NewTransaction(fromUserID, toUserID uint, amount float64, description string) (*Transaction, error) {
+type TransactionRequest struct {
+	Amount      float64 `json:"amount" binding:"required,gt=0"`
+	Description string  `json:"description"`
+}
+
+type TransferRequest struct {
+	Amount      float64   `json:"amount" binding:"required,gt=0"`
+	ToUserID    uuid.UUID `json:"to_user_id" binding:"required"`
+	Description string    `json:"description"`
+}
+
+func NewTransaction(userID uuid.UUID, amount float64, description string) (*Transaction, error) {
 	if amount <= 0 {
 		return nil, ErrInvalidAmount
 	}
 
 	return &Transaction{
-		FromUserID:  fromUserID,
-		ToUserID:    toUserID,
+		ID:          uuid.New(),
+		UserID:      userID,
 		Amount:      amount,
-		State:       TransactionStatePending,
+		Type:        TransactionTypeTransfer,
+		Status:      string(TransactionStatePending),
 		Description: description,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -56,20 +71,20 @@ func (t *Transaction) UpdateState(newState TransactionState) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	switch t.State {
-	case TransactionStatePending:
+	switch t.Status {
+	case "pending":
 		if newState != TransactionStateCompleted && newState != TransactionStateFailed && newState != TransactionStateCancelled {
 			return ErrInvalidState
 		}
-	case TransactionStateCompleted:
+	case "completed":
 		return ErrInvalidState
-	case TransactionStateFailed:
+	case "failed":
 		return ErrInvalidState
-	case TransactionStateCancelled:
+	case "rolled_back":
 		return ErrInvalidState
 	}
 
-	t.State = newState
+	t.Status = string(newState)
 	t.UpdatedAt = time.Now()
 	return nil
 }

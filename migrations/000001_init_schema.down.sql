@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS balance_history;
+DROP TABLE IF EXISTS balances;
+DROP TABLE IF EXISTS users; 

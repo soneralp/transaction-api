@@ -1,32 +1,41 @@
 package config
 
 import (
-	"log"
+	"os"
 
-	"github.com/caarlos0/env/v9"
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	AppEnv     string `env:"APP_ENV" envDefault:"development"`
-	DBHost     string `env:"DB_HOST,required"`
-	DBPort     string `env:"DB_PORT,required"`
-	DBUser     string `env:"DB_USER,required"`
-	DBPassword string `env:"DB_PASSWORD,required"`
-	DBName     string `env:"DB_NAME,required"`
-	LogLevel   string `env:"LOG_LEVEL" envDefault:"info"`
+	DBHost           string
+	DBPort           string
+	DBUser           string
+	DBPassword       string
+	DBName           string
+	JWTSecret        string
+	JWTRefreshSecret string
+	ServerPort       string
 }
 
 func LoadConfig() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found, using system environment variables")
-	}
+	godotenv.Load()
 
-	cfg := Config{}
-	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("Failed to load environment variables: %v", err)
+	return &Config{
+		DBHost:           getEnv("DB_HOST", "localhost"),
+		DBPort:           getEnv("DB_PORT", "5432"),
+		DBUser:           getEnv("DB_USER", "postgres"),
+		DBPassword:       getEnv("DB_PASSWORD", "postgres"),
+		DBName:           getEnv("DB_NAME", "transaction_db"),
+		JWTSecret:        getEnv("JWT_SECRET", "your-secret-key"),
+		JWTRefreshSecret: getEnv("JWT_REFRESH_SECRET", "your-refresh-secret-key"),
+		ServerPort:       getEnv("SERVER_PORT", "8080"),
 	}
+}
 
-	return &cfg
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
 }

@@ -25,9 +25,9 @@ func RunMigrations() {
 			continue
 		}
 
-		_, err = DB.Exec(query)
-		if err != nil {
-			log.Fatal().Err(err).Str("query", query).Msg("Failed to execute migration query")
+		result := DB.Exec(query)
+		if result.Error != nil {
+			log.Fatal().Err(result.Error).Str("query", query).Msg("Failed to execute migration query")
 		}
 	}
 

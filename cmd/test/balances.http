@@ -1,0 +1,11 @@
+### Mevcut Bakiye
+GET http://localhost:8081/api/v1/balances/current
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJleHAiOjE3NDczMTAxNjIsInVzZXJfaWQiOiI4ZmNhNTFlYy05OWJhLTQ1ODItOGM3OC1jOTNmMzk5ZTIyMjMifQ.X6zBsEdJ1Km8Nj4jbUTw2uCd83UaKTDjbKsxeL8ZVPs
+
+### Bakiye Geçmişi
+GET http://localhost:8081/api/v1/balances/historical
+Authorization: Bearer {{access_token}}
+
+### Belirli Bir Zamandaki Bakiye
+GET http://localhost:8081/api/v1/balances/at-time?timestamp=2024-03-20T10:00:00Z
+Authorization: Bearer {{access_token}} 

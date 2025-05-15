@@ -2,31 +2,37 @@ package domain
 
 import (
 	"encoding/json"
-	"errors"
 	"sync"
 	"time"
-)
 
-var (
-	ErrInsufficientBalance = errors.New("insufficient balance")
-	ErrInvalidAmount       = errors.New("invalid amount")
+	"github.com/google/uuid"
 )
 
 type Balance struct {
-	UserID    uint         `json:"user_id"`
-	Amount    float64      `json:"amount"`
+	ID        uuid.UUID    `json:"id" gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
+	UserID    uuid.UUID    `json:"user_id" gorm:"type:uuid;not null;uniqueIndex"`
+	Amount    float64      `json:"amount" gorm:"type:decimal(19,4);not null"`
 	Currency  string       `json:"currency"`
-	CreatedAt time.Time    `json:"created_at"`
-	UpdatedAt time.Time    `json:"updated_at"`
+	CreatedAt time.Time    `json:"created_at" gorm:"not null"`
+	UpdatedAt time.Time    `json:"updated_at" gorm:"not null"`
 	mu        sync.RWMutex `json:"-"`
 }
 
-func NewBalance(userID uint, initialAmount float64, currency string) (*Balance, error) {
+type BalanceHistory struct {
+	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
+	UserID    uuid.UUID `json:"user_id" gorm:"type:uuid;not null"`
+	Amount    float64   `json:"amount" gorm:"type:decimal(19,4);not null"`
+	Timestamp time.Time `json:"timestamp" gorm:"not null"`
+	CreatedAt time.Time `json:"created_at" gorm:"not null"`
+}
+
+func NewBalance(userID uuid.UUID, initialAmount float64, currency string) (*Balance, error) {
 	if initialAmount < 0 {
 		return nil, ErrInvalidAmount
 	}
 
 	return &Balance{
+		ID:        uuid.New(),
 		UserID:    userID,
 		Amount:    initialAmount,
 		Currency:  currency,

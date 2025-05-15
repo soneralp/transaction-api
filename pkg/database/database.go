@@ -6,14 +6,15 @@ import (
 
 	"transaction-api-w-go/config"
 
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-var DB *sqlx.DB
+var DB *gorm.DB
 
-func createConnection(cfg *config.Config) (*sqlx.DB, error) {
+func createConnection(cfg *config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
 		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 
@@ -22,7 +23,9 @@ func createConnection(cfg *config.Config) (*sqlx.DB, error) {
 		Str("database", cfg.DBName).
 		Msg("Attempting database connection")
 
-	db, err := sqlx.Connect("mysql", dsn)
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +34,15 @@ func createConnection(cfg *config.Config) (*sqlx.DB, error) {
 		Str("host", cfg.DBHost).
 		Str("database", cfg.DBName).
 		Msg("Database connection established")
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database instance: %v", err)
+	}
+
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	return db, nil
 }
@@ -68,8 +80,18 @@ func Connect(cfg *config.Config) {
 func Close() {
 	if DB != nil {
 		log.Info().Msg("Closing database connection")
-		if err := DB.Close(); err != nil {
+		sqlDB, err := DB.DB()
+		if err != nil {
+			log.Error().Err(err).Msg("Error getting underlying sql.DB")
+			return
+		}
+		if err := sqlDB.Close(); err != nil {
 			log.Error().Err(err).Msg("Error closing database connection")
 		}
 	}
+}
+
+// GetDB returns the database connection
+func GetDB() *gorm.DB {
+	return DB
 }

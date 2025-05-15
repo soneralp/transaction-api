@@ -5,6 +5,33 @@ import (
 	"sync"
 )
 
+type UserService interface {
+	Register(ctx context.Context, user *User) error
+	Authenticate(ctx context.Context, email, password string) (*User, error)
+	GetByID(ctx context.Context, id uint) (*User, error)
+	Update(ctx context.Context, user *User) error
+	Delete(ctx context.Context, id uint) error
+	HasPermission(ctx context.Context, userID uint, permission string) bool
+}
+
+type TransactionService interface {
+	CreateTransaction(ctx context.Context, transaction *Transaction) error
+	ProcessTransaction(ctx context.Context, transactionID uint) error
+	RollbackTransaction(ctx context.Context, transactionID uint) error
+	GetTransaction(ctx context.Context, transactionID uint) (*Transaction, error)
+	GetUserTransactions(ctx context.Context, userID uint) ([]*Transaction, error)
+	GetStats() *TransactionStats
+}
+
+type BalanceService interface {
+	AddFunds(ctx context.Context, userID uint, amount float64) error
+	WithdrawFunds(ctx context.Context, userID uint, amount float64) error
+	GetBalance(ctx context.Context, userID uint) (*Balance, error)
+	TransferFunds(ctx context.Context, fromUserID uint, toUserID uint, amount float64) error
+	GetBalanceHistory(ctx context.Context, userID uint) ([]*BalanceHistory, error)
+	CalculateTotalBalance(ctx context.Context, userID uint) (float64, error)
+}
+
 type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	GetByID(ctx context.Context, id uint) (*User, error)
@@ -18,19 +45,17 @@ type TransactionRepository interface {
 	GetByID(ctx context.Context, id uint) (*Transaction, error)
 	GetByUserID(ctx context.Context, userID uint) ([]*Transaction, error)
 	Update(ctx context.Context, transaction *Transaction) error
+	Delete(ctx context.Context, id uint) error
 }
 
 type BalanceRepository interface {
 	Create(ctx context.Context, balance *Balance) error
+	GetByID(ctx context.Context, id uint) (*Balance, error)
 	GetByUserID(ctx context.Context, userID uint) (*Balance, error)
 	Update(ctx context.Context, balance *Balance) error
-}
-
-type UserService interface {
-	Register(ctx context.Context, username, email, password string) (*User, error)
-	GetByID(ctx context.Context, id uint) (*User, error)
-	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id uint) error
+	CreateHistory(ctx context.Context, history *BalanceHistory) error
+	GetHistoryByUserID(ctx context.Context, userID uint) ([]*BalanceHistory, error)
 }
 
 type TransactionStats struct {
@@ -48,20 +73,4 @@ func (s *TransactionStats) UpdateStats(amount float64, processTime float64) {
 	s.TotalProcessed++
 	s.TotalAmount += amount
 	s.AverageProcessTime = (s.AverageProcessTime*float64(s.TotalProcessed-1) + processTime) / float64(s.TotalProcessed)
-}
-
-type TransactionService interface {
-	CreateTransaction(ctx context.Context, fromUserID, toUserID uint, amount float64, description string) (*Transaction, error)
-	GetTransaction(ctx context.Context, id uint) (*Transaction, error)
-	GetUserTransactions(ctx context.Context, userID uint) ([]*Transaction, error)
-	ProcessTransaction(ctx context.Context, transactionID uint) error
-	CancelTransaction(ctx context.Context, transactionID uint) error
-	GetStats() *TransactionStats
-}
-
-type BalanceService interface {
-	GetBalance(ctx context.Context, userID uint) (*Balance, error)
-	AddFunds(ctx context.Context, userID uint, amount float64) error
-	WithdrawFunds(ctx context.Context, userID uint, amount float64) error
-	TransferFunds(ctx context.Context, fromUserID, toUserID uint, amount float64) error
 }

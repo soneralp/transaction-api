@@ -1,0 +1,27 @@
+### Kullanıcı Kaydı
+POST http://localhost:8081/api/v1/auth/register
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "password": "password123",
+    "first_name": "John",
+    "last_name": "Doe"
+}
+
+### Kullanıcı Girişi
+POST http://localhost:8081/api/v1/auth/login
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "password": "password123"
+}
+
+### Token Yenileme
+POST http://localhost:8081/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+    "refresh_token": "{{your_refresh_token}}"
+} 

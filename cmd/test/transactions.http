@@ -1,0 +1,38 @@
+### Para Yatırma
+POST http://localhost:8081/api/v1/transactions/credit
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJleHAiOjE3NDczMDk5NDEsInVzZXJfaWQiOiJiZmJlMGE3ZS0xNDI4LTQzMTAtOWQ5Mi1mMTU1NTViNjNmZTQifQ.RmSCTgUV1mFBgHSj9SGjItAlcF_hx1CkpMrUoe0fUFk
+
+{
+    "amount": 100.50,
+    "description": "Maaş yatırma"
+}
+
+### Para Çekme
+POST http://localhost:8081/api/v1/transactions/debit
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJleHAiOjE3NDczMDk5NDEsInVzZXJfaWQiOiJiZmJlMGE3ZS0xNDI4LTQzMTAtOWQ5Mi1mMTU1NTViNjNmZTQifQ.RmSCTgUV1mFBgHSj9SGjItAlcF_hx1CkpMrUoe0fUFk
+
+{
+    "amount": 50.25,
+    "description": "ATM'den para çekme"
+}
+
+### Para Transferi
+POST http://localhost:8081/api/v1/transactions/transfer
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+    "amount": 75.00,
+    "to_user_id": "recipient-uuid-here",
+    "description": "Arkadaşa ödeme"
+}
+
+### İşlem Geçmişi
+GET http://localhost:8081/api/v1/transactions/history
+Authorization: Bearer {{access_token}}
+
+### Belirli Bir İşlemi Getir
+GET http://localhost:8081/api/v1/transactions/transaction-uuid-here
+Authorization: Bearer {{access_token}} 
