@@ -1,12 +1,12 @@
-### Tüm Kullanıcıları Listele
+### List All Users
 GET http://localhost:8081/api/v1/users
 Authorization: Bearer {{access_token}}
 
-### Belirli Bir Kullanıcıyı Getir
+### Get a specific user
 GET http://localhost:8081/api/v1/users/user-uuid-here
 Authorization: Bearer {{access_token}}
 
-### Kullanıcı Bilgilerini Güncelle
+### Update user information
 PUT http://localhost:8081/api/v1/users/user-uuid-here
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
@@ -16,6 +16,6 @@ Authorization: Bearer {{access_token}}
     "last_name": "Doe"
 }
 
-### Kullanıcı Sil
+### Delete user
 DELETE http://localhost:8081/api/v1/users/user-uuid-here
 Authorization: Bearer {{access_token}} 

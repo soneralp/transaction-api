@@ -1,24 +1,24 @@
-### Para Yatırma
+### Deposit
 POST http://localhost:8081/api/v1/transactions/credit
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJleHAiOjE3NDczMDk5NDEsInVzZXJfaWQiOiJiZmJlMGE3ZS0xNDI4LTQzMTAtOWQ5Mi1mMTU1NTViNjNmZTQifQ.RmSCTgUV1mFBgHSj9SGjItAlcF_hx1CkpMrUoe0fUFk
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJleHAiOjE3NTAxMzUxOTAsInVzZXJfaWQiOiI3MjI1ZDE5Ny02NGM1LTQ0M2EtOTQwYi02ODRhZjY1MThkMmMifQ.EnPK47K-x9u7URVkBJyUnd16DXXZ_3oovlLd7w1NcMA
 
 {
     "amount": 100.50,
-    "description": "Maaş yatırma"
+    "description": "Deposit"
 }
 
-### Para Çekme
+### Withdrawal
 POST http://localhost:8081/api/v1/transactions/debit
 Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJleHAiOjE3NDczMDk5NDEsInVzZXJfaWQiOiJiZmJlMGE3ZS0xNDI4LTQzMTAtOWQ5Mi1mMTU1NTViNjNmZTQifQ.RmSCTgUV1mFBgHSj9SGjItAlcF_hx1CkpMrUoe0fUFk
 
 {
     "amount": 50.25,
-    "description": "ATM'den para çekme"
+    "description": "Withdrawal"
 }
 
-### Para Transferi
+### Money Transfer
 POST http://localhost:8081/api/v1/transactions/transfer
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
@@ -26,13 +26,13 @@ Authorization: Bearer {{access_token}}
 {
     "amount": 75.00,
     "to_user_id": "recipient-uuid-here",
-    "description": "Arkadaşa ödeme"
+    "description": "Money Transfer"
 }
 
-### İşlem Geçmişi
+### Transaction History
 GET http://localhost:8081/api/v1/transactions/history
 Authorization: Bearer {{access_token}}
 
-### Belirli Bir İşlemi Getir
+### Get a specific transaction
 GET http://localhost:8081/api/v1/transactions/transaction-uuid-here
 Authorization: Bearer {{access_token}} 

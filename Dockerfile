@@ -1,4 +1,5 @@
-FROM docker.io/library/golang:1.22-alpine
+# Build stage
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
@@ -9,7 +10,19 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o main cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o main cmd/server/main.go
+
+# Final stage
+FROM alpine:latest
+
+WORKDIR /app
+
+# Install necessary certificates
+RUN apk --no-cache add ca-certificates
+
+COPY --from=builder /app/main .
+COPY --from=builder /app/config ./config
+COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 8080
 

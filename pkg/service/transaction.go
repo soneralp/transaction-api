@@ -1,10 +1,12 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"transaction-api-w-go/pkg/domain"
+	"transaction-api-w-go/pkg/metrics"
 	"transaction-api-w-go/pkg/repository"
 
 	"github.com/google/uuid"
@@ -14,6 +16,7 @@ type TransactionService struct {
 	transactionRepo *repository.TransactionRepository
 	balanceRepo     *repository.BalanceRepository
 	userRepo        *repository.UserRepository
+	stats           *domain.TransactionStats
 }
 
 func NewTransactionService(
@@ -25,10 +28,11 @@ func NewTransactionService(
 		transactionRepo: transactionRepo,
 		balanceRepo:     balanceRepo,
 		userRepo:        userRepo,
+		stats:           &domain.TransactionStats{},
 	}
 }
 
-func (s *TransactionService) Credit(userID string, amount float64, description string) (*domain.Transaction, error) {
+func (s *TransactionService) Credit(ctx context.Context, userID string, amount float64, description string) (*domain.Transaction, error) {
 	balance, err := s.balanceRepo.GetByUserID(userID)
 	if err != nil {
 		balance = &domain.Balance{
@@ -55,7 +59,7 @@ func (s *TransactionService) Credit(userID string, amount float64, description s
 		UpdatedAt:    time.Now(),
 	}
 
-	if err := s.transactionRepo.Create(transaction); err != nil {
+	if err := s.transactionRepo.Create(ctx, transaction); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +71,7 @@ func (s *TransactionService) Credit(userID string, amount float64, description s
 	return transaction, nil
 }
 
-func (s *TransactionService) Debit(userID string, amount float64, description string) (*domain.Transaction, error) {
+func (s *TransactionService) Debit(ctx context.Context, userID string, amount float64, description string) (*domain.Transaction, error) {
 	balance, err := s.balanceRepo.GetByUserID(userID)
 	if err != nil {
 		return nil, err
@@ -88,7 +92,7 @@ func (s *TransactionService) Debit(userID string, amount float64, description st
 		UpdatedAt:    time.Now(),
 	}
 
-	if err := s.transactionRepo.Create(transaction); err != nil {
+	if err := s.transactionRepo.Create(ctx, transaction); err != nil {
 		return nil, err
 	}
 
@@ -100,7 +104,7 @@ func (s *TransactionService) Debit(userID string, amount float64, description st
 	return transaction, nil
 }
 
-func (s *TransactionService) Transfer(fromUserID, toUserID string, amount float64, description string) (*domain.Transaction, error) {
+func (s *TransactionService) Transfer(ctx context.Context, fromUserID, toUserID string, amount float64, description string) (*domain.Transaction, error) {
 	fromBalance, err := s.balanceRepo.GetByUserID(fromUserID)
 	if err != nil {
 		return nil, err
@@ -126,7 +130,7 @@ func (s *TransactionService) Transfer(fromUserID, toUserID string, amount float6
 		UpdatedAt:    time.Now(),
 	}
 
-	if err := s.transactionRepo.Create(transaction); err != nil {
+	if err := s.transactionRepo.Create(ctx, transaction); err != nil {
 		return nil, err
 	}
 
@@ -143,10 +147,44 @@ func (s *TransactionService) Transfer(fromUserID, toUserID string, amount float6
 	return transaction, nil
 }
 
-func (s *TransactionService) GetHistory(userID string) ([]domain.Transaction, error) {
-	return s.transactionRepo.GetByUserID(userID)
+func (s *TransactionService) GetHistory(ctx context.Context, userID uint) ([]*domain.Transaction, error) {
+	return s.transactionRepo.GetByUserID(ctx, userID)
 }
 
-func (s *TransactionService) GetByID(userID, transactionID string) (*domain.Transaction, error) {
-	return s.transactionRepo.GetByID(userID, transactionID)
+func (s *TransactionService) GetByID(ctx context.Context, transactionID uint) (*domain.Transaction, error) {
+	return s.transactionRepo.GetByID(ctx, transactionID)
+}
+
+func (s *TransactionService) ProcessTransaction(ctx context.Context, transactionID uint) error {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		metrics.DatabaseQueryDuration.WithLabelValues("process_transaction").Observe(duration)
+	}()
+
+	transaction, err := s.transactionRepo.GetByID(ctx, transactionID)
+	if err != nil {
+		metrics.TransactionTotal.WithLabelValues("process", "failed").Inc()
+		return err
+	}
+
+	metrics.TransactionTotal.WithLabelValues("process", "success").Inc()
+	metrics.TransactionAmount.WithLabelValues("process").Observe(transaction.Amount)
+	return nil
+}
+
+func (s *TransactionService) CreateTransaction(ctx context.Context, transaction *domain.Transaction) error {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		metrics.DatabaseQueryDuration.WithLabelValues("create_transaction").Observe(duration)
+	}()
+
+	if err := s.transactionRepo.Create(ctx, transaction); err != nil {
+		return err
+	}
+
+	metrics.TransactionTotal.WithLabelValues("create", "success").Inc()
+	metrics.TransactionAmount.WithLabelValues("create").Observe(transaction.Amount)
+	return nil
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"transaction-api-w-go/pkg/domain"
 	"transaction-api-w-go/pkg/service"
@@ -23,7 +24,7 @@ func (h *TransactionHandler) Credit(c *gin.Context) {
 	req := c.MustGet("validated_data").(*domain.TransactionRequest)
 
 	userID := c.GetString("user_id")
-	transaction, err := h.transactionService.Credit(userID, req.Amount, req.Description)
+	transaction, err := h.transactionService.Credit(c.Request.Context(), userID, req.Amount, req.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -36,7 +37,7 @@ func (h *TransactionHandler) Debit(c *gin.Context) {
 	req := c.MustGet("validated_data").(*domain.TransactionRequest)
 
 	userID := c.GetString("user_id")
-	transaction, err := h.transactionService.Debit(userID, req.Amount, req.Description)
+	transaction, err := h.transactionService.Debit(c.Request.Context(), userID, req.Amount, req.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -49,7 +50,7 @@ func (h *TransactionHandler) Transfer(c *gin.Context) {
 	req := c.MustGet("validated_data").(*domain.TransferRequest)
 
 	fromUserID := c.GetString("user_id")
-	transaction, err := h.transactionService.Transfer(fromUserID, req.ToUserID.String(), req.Amount, req.Description)
+	transaction, err := h.transactionService.Transfer(c.Request.Context(), fromUserID, req.ToUserID.String(), req.Amount, req.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -59,8 +60,13 @@ func (h *TransactionHandler) Transfer(c *gin.Context) {
 }
 
 func (h *TransactionHandler) GetHistory(c *gin.Context) {
-	userID := c.GetString("user_id")
-	transactions, err := h.transactionService.GetHistory(userID)
+	userIDStr := c.GetString("user_id")
+	userID, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Geçersiz user ID"})
+		return
+	}
+	transactions, err := h.transactionService.GetHistory(c.Request.Context(), uint(userID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -70,10 +76,13 @@ func (h *TransactionHandler) GetHistory(c *gin.Context) {
 }
 
 func (h *TransactionHandler) GetByID(c *gin.Context) {
-	userID := c.GetString("user_id")
-	transactionID := c.Param("id")
-
-	transaction, err := h.transactionService.GetByID(userID, transactionID)
+	transactionIDStr := c.Param("id")
+	transactionID, err := strconv.ParseUint(transactionIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Geçersiz transaction ID"})
+		return
+	}
+	transaction, err := h.transactionService.GetByID(c.Request.Context(), uint(transactionID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

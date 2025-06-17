@@ -1,4 +1,4 @@
-### Kullanıcı Kaydı
+### User Registration
 POST http://localhost:8081/api/v1/auth/register
 Content-Type: application/json
 
@@ -9,7 +9,7 @@ Content-Type: application/json
     "last_name": "Doe"
 }
 
-### Kullanıcı Girişi
+### User Login
 POST http://localhost:8081/api/v1/auth/login
 Content-Type: application/json
 
@@ -18,7 +18,7 @@ Content-Type: application/json
     "password": "password123"
 }
 
-### Token Yenileme
+### Token Refresh
 POST http://localhost:8081/api/v1/auth/refresh
 Content-Type: application/json
 

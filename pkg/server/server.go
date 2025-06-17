@@ -11,6 +11,7 @@ import (
 	"transaction-api-w-go/pkg/server/handlers"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/time/rate"
 )
@@ -52,6 +53,7 @@ func NewServer(port int) *Server {
 func (s *Server) setupMiddleware() {
 	s.engine.Use(middleware.ErrorHandlerMiddleware())
 	s.engine.Use(middleware.PerformanceMiddleware())
+	s.engine.Use(middleware.MetricsMiddleware())
 
 	s.engine.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -101,6 +103,8 @@ func (s *Server) setupMiddleware() {
 }
 
 func (s *Server) setupRoutes() {
+	s.engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	auth := s.engine.Group("/api/v1/auth")
 	{
 		auth.POST("/register", middleware.ValidationMiddleware(&domain.RegisterRequest{}), s.authHandler.Register)
