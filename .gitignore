@@ -25,4 +25,7 @@
 Thumbs.db
 
 # Docker volumes
-mysql_data/ 
+mysql_data/
+
+# Documentation
+/docs/ 

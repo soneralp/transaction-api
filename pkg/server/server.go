@@ -24,6 +24,10 @@ type Server struct {
 	userHandler        *handlers.UserHandler
 	transactionHandler *handlers.TransactionHandler
 	balanceHandler     *handlers.BalanceHandler
+	eventHandler       *EventHandler
+	cacheHandler       *CacheHandler
+	advancedHandler    *AdvancedTransactionHandler
+	haHandler          *HAHandler
 	jwtSecret          string
 }
 
@@ -139,6 +143,115 @@ func (s *Server) setupRoutes() {
 			balances.GET("/historical", s.balanceHandler.GetHistoricalBalance)
 			balances.GET("/at-time", s.balanceHandler.GetBalanceAtTime)
 		}
+
+		advanced := api.Group("/advanced")
+		{
+			scheduled := advanced.Group("/scheduled")
+			{
+				scheduled.POST("", s.advancedHandler.CreateScheduledTransaction)
+				scheduled.GET("", s.advancedHandler.GetUserScheduledTransactions)
+				scheduled.GET("/:id", s.advancedHandler.GetScheduledTransaction)
+				scheduled.PUT("/:id", s.advancedHandler.UpdateScheduledTransaction)
+				scheduled.DELETE("/:id", s.advancedHandler.CancelScheduledTransaction)
+				scheduled.POST("/execute", s.advancedHandler.ExecuteScheduledTransactions)
+			}
+
+			batch := advanced.Group("/batch")
+			{
+				batch.POST("", s.advancedHandler.CreateBatchTransaction)
+				batch.GET("/:id", s.advancedHandler.GetBatchTransaction)
+				batch.GET("/:batch_id/items", s.advancedHandler.GetBatchTransactionItems)
+				batch.POST("/:id/process", s.advancedHandler.ProcessBatchTransaction)
+				batch.DELETE("/:id", s.advancedHandler.CancelBatchTransaction)
+			}
+
+			limits := advanced.Group("/limits")
+			{
+				limits.POST("", s.advancedHandler.CreateTransactionLimit)
+				limits.GET("/:currency", s.advancedHandler.GetTransactionLimit)
+				limits.PUT("/:currency", s.advancedHandler.UpdateTransactionLimit)
+				limits.POST("/:currency/reset", s.advancedHandler.ResetTransactionLimits)
+			}
+
+			multiCurrency := advanced.Group("/multi-currency")
+			{
+				multiCurrency.POST("/balance", s.advancedHandler.CreateMultiCurrencyBalance)
+				multiCurrency.GET("/balance/:currency", s.advancedHandler.GetMultiCurrencyBalance)
+				multiCurrency.GET("/balances", s.advancedHandler.GetAllBalances)
+				multiCurrency.POST("/convert", s.advancedHandler.ConvertCurrency)
+				multiCurrency.POST("/transfer", s.advancedHandler.TransferBetweenCurrencies)
+			}
+		}
+
+		events := api.Group("/events")
+		events.Use(middleware.RoleMiddleware("admin")) // Sadece admin'ler event'leri görebilir
+		{
+			events.GET("/aggregate/:aggregate_id", s.eventHandler.GetEventsByAggregate)
+			events.GET("/type/:event_type", s.eventHandler.GetEventsByType)
+			events.GET("/time-range", s.eventHandler.GetEventsByTimeRange)
+			events.GET("", s.eventHandler.GetAllEvents)
+			events.GET("/count/:aggregate_id", s.eventHandler.GetEventCount)
+
+			events.POST("/replay/aggregate/:aggregate_id", s.eventHandler.ReplayEventsForAggregate)
+			events.POST("/replay/type/:event_type", s.eventHandler.ReplayEventsByType)
+			events.POST("/replay/time-range", s.eventHandler.ReplayEventsByTimeRange)
+			events.POST("/replay/all", s.eventHandler.ReplayAllEvents)
+			events.GET("/replay/statistics", s.eventHandler.GetReplayStatistics)
+		}
+
+		cache := api.Group("/cache")
+		cache.Use(middleware.RoleMiddleware("admin")) // Sadece admin'ler cache'i yönetebilir
+		{
+			cache.GET("/stats", s.cacheHandler.GetCacheStats)
+			cache.DELETE("/flush", s.cacheHandler.FlushAllCache)
+			cache.GET("/ttl/:key", s.cacheHandler.GetCacheTTL)
+			cache.GET("/exists/:key", s.cacheHandler.CheckCacheExists)
+			cache.POST("/increment/:key", s.cacheHandler.IncrementCacheKey)
+
+			cache.POST("/warmup/users", s.cacheHandler.WarmupUsers)
+			cache.POST("/warmup/transactions", s.cacheHandler.WarmupTransactions)
+			cache.POST("/warmup/balances", s.cacheHandler.WarmupBalances)
+			cache.POST("/warmup/aggregate-events", s.cacheHandler.WarmupAggregateEvents)
+
+			cache.DELETE("/invalidate/user/:user_id", s.cacheHandler.InvalidateUser)
+			cache.DELETE("/invalidate/transaction/:transaction_id", s.cacheHandler.InvalidateTransaction)
+			cache.DELETE("/invalidate/balance/:user_id", s.cacheHandler.InvalidateBalance)
+			cache.DELETE("/invalidate/aggregate-events/:aggregate_id", s.cacheHandler.InvalidateAggregateEvents)
+
+			cache.GET("/user/:user_id", s.cacheHandler.GetCachedUser)
+			cache.GET("/transaction/:transaction_id", s.cacheHandler.GetCachedTransaction)
+			cache.GET("/balance/:user_id", s.cacheHandler.GetCachedBalance)
+			cache.GET("/user/:user_id/transactions", s.cacheHandler.GetCachedUserTransactions)
+			cache.GET("/aggregate-events/:aggregate_id", s.cacheHandler.GetCachedAggregateEvents)
+		}
+
+		ha := api.Group("/ha")
+		ha.Use(middleware.RoleMiddleware("admin")) // Sadece admin'ler HA'yı yönetebilir
+		{
+			ha.GET("/health", s.haHandler.GetSystemHealth)
+			ha.GET("/metrics", s.haHandler.GetHAMetrics)
+
+			ha.GET("/database/health", s.haHandler.GetDatabaseHealth)
+			ha.GET("/database/health/:node", s.haHandler.GetDatabaseNodeHealth)
+			ha.POST("/database/failover", s.haHandler.ForceDatabaseFailover)
+
+			ha.GET("/loadbalancer/stats", s.haHandler.GetLoadBalancerStats)
+			ha.POST("/loadbalancer/backends", s.haHandler.AddLoadBalancerBackend)
+			ha.DELETE("/loadbalancer/backends/:id", s.haHandler.RemoveLoadBalancerBackend)
+
+			ha.GET("/circuitbreakers", s.haHandler.GetAllCircuitBreakers)
+			ha.GET("/circuitbreakers/:name", s.haHandler.GetCircuitBreakerStats)
+			ha.POST("/circuitbreakers", s.haHandler.CreateCircuitBreaker)
+			ha.POST("/circuitbreakers/:name/open", s.haHandler.ForceCircuitBreakerOpen)
+			ha.POST("/circuitbreakers/:name/close", s.haHandler.ForceCircuitBreakerClose)
+			ha.POST("/circuitbreakers/:name/reset", s.haHandler.ResetCircuitBreaker)
+
+			ha.GET("/fallback/stats", s.haHandler.GetFallbackStats)
+			ha.POST("/fallback/test", s.haHandler.TestFallback)
+
+			ha.GET("/config", s.haHandler.GetHAConfig)
+			ha.PUT("/config", s.haHandler.UpdateHAConfig)
+		}
 	}
 }
 
@@ -165,10 +278,18 @@ func (s *Server) SetHandlers(
 	userHandler *handlers.UserHandler,
 	transactionHandler *handlers.TransactionHandler,
 	balanceHandler *handlers.BalanceHandler,
+	eventHandler *EventHandler,
+	cacheHandler *CacheHandler,
+	advancedHandler *AdvancedTransactionHandler,
+	haHandler *HAHandler,
 ) {
 	s.authHandler = authHandler
 	s.userHandler = userHandler
 	s.transactionHandler = transactionHandler
 	s.balanceHandler = balanceHandler
+	s.eventHandler = eventHandler
+	s.cacheHandler = cacheHandler
+	s.advancedHandler = advancedHandler
+	s.haHandler = haHandler
 	s.setupRoutes()
 }
